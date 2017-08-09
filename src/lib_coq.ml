@@ -62,7 +62,7 @@ module Nat = struct
       aux n
 end
 
-(** Positive from the standard library *)
+(** Positives from the standard library *)
 module Positive = struct
 
 	let path = ["Coq";"Numbers";"BinNums"]
@@ -78,20 +78,20 @@ module Positive = struct
 		then raise (Invalid_argument ("to_positive: " ^ string_of_int n))
 		else
 		  begin
-		    if n = 1 
+		    if n = 1
 		    then (Lazy.force _xH)
 		    else
-		      begin
-	     		if n mod 2 = 0 
-		    	then Term.mkApp ((Lazy.force _xO), [| (to_positive (n / 2)) |])
-		    	else Term.mkApp ((Lazy.force _xI), [| (to_positive (n / 2)) |])
-		      end
-	      end
+			begin
+              if n mod 2 = 0
+		      then Term.mkApp ((Lazy.force _xO), [| (to_positive (n / 2)) |])
+		      else Term.mkApp ((Lazy.force _xI), [| (to_positive (n / 2)) |])
+	        end
+		  end
 	  end
 	
 end
 
-(** Positive from the standard library *)
+(** Integers from the standard library *)
 module Z = struct
 
 	let path = ["Coq";"Numbers";"BinNums"]
@@ -106,11 +106,10 @@ module Z = struct
 	  then (Lazy.force _Z0)
 	  else
 	    begin
-		  if n > 0 
-		  then Term.mkApp ((Lazy.force _Zpos), [| Positive.to_positive n |])
-		  else Term.mkApp ((Lazy.force _Zneg), [| Positive.to_positive (-n) |])
-		end
-	
+	       if n > 0 
+	       then Term.mkApp ((Lazy.force _Zpos), [| Positive.to_positive n |])
+	       else Term.mkApp ((Lazy.force _Zneg), [| Positive.to_positive (-n) |])
+	    end
 end
    
 (** Lists from the standard library*)
@@ -133,6 +132,7 @@ module List = struct
   
   let type_of_list ty =
     Term.mkApp (Lazy.force typ, [|ty|])
+	
 end
 
 

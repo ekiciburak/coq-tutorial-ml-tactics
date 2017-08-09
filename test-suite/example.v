@@ -4,7 +4,7 @@ Require Import BinNums Coq.ZArith.ZArith.
 
 Open Scope Z_scope.
 
-Goal 15%Z = -1530000.
+Goal 15%Z = -15340000.
 Proof. reflect_Z. simpl. Abort.
 
 (* example 1 *)

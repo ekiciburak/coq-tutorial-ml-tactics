@@ -21,19 +21,19 @@ module Arith = struct
       expressions *)
 
   type p =
-	| XH 
+    | XH 
     | XI of p
-	| XO of p
+    | XO of p
     | PAdd of (p * p)
     | PConst of int 
     | PVar of int	
   
   type t =
     | Z0
-	| ZNeg of p
-	| ZPos of p
+    | ZNeg of p
+    | ZPos of p
     | Add of (t * t)
-	| ZConst of int
+    | ZConst of int
     | ZVar of int	
 	
 	       
@@ -69,16 +69,16 @@ module Arith = struct
 		      | PConst i -> PConst (i * 2 + 1)
 		      | e -> XI e
 	        end
-          | _ when Term.eq_constr c xH -> XH
-		  | _ -> let i = Lib_coq.Env.add env c in PVar i
+              | _ when Term.eq_constr c xH -> XH
+              | _ -> let i = Lib_coq.Env.add env c in PVar i
 	    end
 	  in
 	  match Lib_coq.decomp_term c with
-        | Term.App (head,args) when Term.eq_constr head zadd && Array.length args = 2 -> Add  (aux args.(0), aux args.(1))
+            | Term.App (head,args) when Term.eq_constr head zadd && Array.length args = 2 -> Add  (aux args.(0), aux args.(1))
  	    | Term.App (head,args) when Term.eq_constr head zneg && Array.length args = 1 -> ZNeg (paux args.(0))
  	    | Term.App (head,args) when Term.eq_constr head zpos && Array.length args = 1 -> ZPos (paux args.(0))
-        | _ when Term.eq_constr c z0 -> Z0	  
-	    | _ -> let i = Lib_coq.Env.add env c in ZVar i
+            | _ when Term.eq_constr c z0 -> Z0	  
+            | _ -> let i = Lib_coq.Env.add env c in ZVar i
     in
     aux c
 end
