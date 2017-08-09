@@ -74,21 +74,20 @@ module Positive = struct
 	(* A coq positive from an ocaml integer *)
 	let rec to_positive n =
 	  begin
-		if n <= 0
-		then raise (Invalid_argument ("to_positive: " ^ string_of_int n))
-		else
-		  begin
-		    if n = 1
-		    then (Lazy.force _xH)
-		    else
-			begin
-              if n mod 2 = 0
-		      then Term.mkApp ((Lazy.force _xO), [| (to_positive (n / 2)) |])
-		      else Term.mkApp ((Lazy.force _xI), [| (to_positive (n / 2)) |])
-	        end
-		  end
+	    if n <= 0
+	    then raise (Invalid_argument ("to_positive: " ^ string_of_int n))
+	    else
+	    begin
+	      if n = 1
+	      then (Lazy.force _xH)
+	      else
+	      begin
+                if n mod 2 = 0
+	        then Term.mkApp ((Lazy.force _xO), [| (to_positive (n / 2)) |])
+	        else Term.mkApp ((Lazy.force _xI), [| (to_positive (n / 2)) |])
+	      end
+	    end
 	  end
-	
 end
 
 (** Integers from the standard library *)
