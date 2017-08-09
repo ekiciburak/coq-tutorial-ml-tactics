@@ -1,4 +1,4 @@
-DECLARE PLUGIN "theplug"
+DECLARE PLUGIN "tpi"
 
 (** We reify the structure of coq expressions as an ocaml
     data-type. We reify only the structure of the expression
@@ -8,47 +8,77 @@ DECLARE PLUGIN "theplug"
 module Arith = struct
 
   (** First, we initialise some constants from Coq standard library.*)
-  let plus = lazy (Lib_coq.init_constant ["Coq"; "Init"; "Peano"] "plus")
-  let succ = lazy (Lib_coq.init_constant ["Coq"; "Init"; "Datatypes"] "S")
-  let zero = lazy (Lib_coq.init_constant ["Coq"; "Init"; "Datatypes"] "O")
-
+  let z0   = lazy (Lib_coq.init_constant ["Coq"; "Numbers"; "BinNums"] "Z0")
+  let zneg = lazy (Lib_coq.init_constant ["Coq"; "Numbers"; "BinNums"] "Zneg")
+  let zpos = lazy (Lib_coq.init_constant ["Coq"; "Numbers"; "BinNums"] "Zpos")
+  let zadd  = lazy (Lib_coq.init_constant ["Coq"; "ZArith"; "BinIntDef"; "Z"] "add") (** double check it *)
+   
+  let xH   = lazy (Lib_coq.init_constant ["Coq"; "Numbers"; "BinNums"] "xH")
+  let xO   = lazy (Lib_coq.init_constant ["Coq"; "Numbers"; "BinNums"] "xO")
+  let xI   = lazy (Lib_coq.init_constant ["Coq"; "Numbers"; "BinNums"] "xI")
+  
   (** [t] is an algebraic data-type that represents reified arithemtic
       expressions *)
-  type t =
-    | Plus of (t * t)
-    | Const of int 		      
-    | Succ of t 
-    | Var of int 		       
 
+  type p =
+	| XH 
+    | XI of p
+	| XO of p
+    | PAdd of (p * p)
+    | PConst of int 
+    | PVar of int	
+  
+  type t =
+    | Z0
+	| ZNeg of p
+	| ZPos of p
+    | Add of (t * t)
+	| ZConst of int
+    | ZVar of int	
 	
+	       
   let quote (env : Lib_coq.Env.t) (c : Term.constr) : t =
     (** First, we force the constants, once and for all  *)
-    let plus = Lazy.force plus in 
-    let succ = Lazy.force succ in 
-    let zero = Lazy.force zero in 
+    let zadd = Lazy.force zadd in 
+    let z0 = Lazy.force z0 in 
+    let zneg = Lazy.force zneg in
+    let zpos = Lazy.force zpos in
+
+	let xH = Lazy.force xH in 
+    let xO = Lazy.force xO in
+    let xI = Lazy.force xI in 
     (** Second, we decompose recursively the given term.  If the term
 	is an application, we compare the head-symbol with [plus] and
 	[succ]. If the term is equal to [zero], we build a
 	constant. In any other case, we have to add a new variable to
 	the reification environement. *)
-    let rec aux c = match Lib_coq.decomp_term c with
-      | Term.App (head,args) 
-	  when Term.eq_constr head plus && Array.length args = 2
-	  -> Plus (aux args.(0), aux args.(1))
-      | Term.App (head,args) 
-	  when Term.eq_constr head succ && Array.length args =  1 
-	  ->
-	(** a small match to get a intelligible representation of
-	    constants. *)
-	begin match (aux args.(0)) with 
-	  | Const i -> Const (i +1)
-	  | e -> Succ e
-	end
-      | _ when Term.eq_constr c zero ->
-	Const 0
-      | _ ->
-	let i = Lib_coq.Env.add env c in
-	Var i
+    let rec aux c = 
+	  let rec paux c =
+        begin match Lib_coq.decomp_term c with
+ 	      | Term.App (head,args) when Term.eq_constr head xO && Array.length args = 1 ->  	  
+			(** a small match to get a intelligible representation of
+			constants. *)
+		    begin match (paux args.(0)) with 
+		      | PConst i -> PConst (i * 2)
+		      | e -> XO e
+		    end
+ 	      | Term.App (head,args) when Term.eq_constr head xI && Array.length args = 1 ->      	  
+			(** a small match to get a intelligible representation of
+			constants. *)
+	        begin match (paux args.(0)) with 
+		      | PConst i -> PConst (i * 2 + 1)
+		      | e -> XI e
+	        end
+          | _ when Term.eq_constr c xH -> XH
+		  | _ -> let i = Lib_coq.Env.add env c in PVar i
+	    end
+	  in
+	  match Lib_coq.decomp_term c with
+        | Term.App (head,args) when Term.eq_constr head zadd && Array.length args = 2 -> Add  (aux args.(0), aux args.(1))
+ 	    | Term.App (head,args) when Term.eq_constr head zneg && Array.length args = 1 -> ZNeg (paux args.(0))
+ 	    | Term.App (head,args) when Term.eq_constr head zpos && Array.length args = 1 -> ZPos (paux args.(0))
+        | _ when Term.eq_constr c z0 -> Z0	  
+	    | _ -> let i = Lib_coq.Env.add env c in ZVar i
     in
     aux c
 end
@@ -57,6 +87,7 @@ end
     we will reify it inside Coq (this is also the purpose of the Quote
     module of standard Coq). 
 *)
+
 module Reif = struct
   (** We initialize a new bunch of constants that correspond to the
       constructors of our inductive. *)
@@ -67,23 +98,44 @@ module Reif = struct
       to coq_makefile: [-R ./src ML_tutorial] adds the physical
       directory [src] as the logical directory [ML_tutorial].
   *)
-  let path = ["ML_tutorial";"Theory"] 
+  let path = ["Tutorial";"Theory"]
+  
+  let add = lazy (Lib_coq.init_constant  path "a_zadd")
+  let zvar = lazy (Lib_coq.init_constant  path "a_zvar")
+  let zconst = lazy (Lib_coq.init_constant path "a_zconst")
+  let z0 = lazy (Lib_coq.init_constant path "a_Z0")
+  let zneg = lazy (Lib_coq.init_constant path "a_ZNeg")
+  let zpos = lazy (Lib_coq.init_constant path "a_ZPos")
 
-  let plus = lazy (Lib_coq.init_constant  path "a_plus")
-  let var = lazy (Lib_coq.init_constant  path "a_var")
-  let const = lazy (Lib_coq.init_constant path  "a_const")
-  let succ = lazy (Lib_coq.init_constant path "a_succ")
+  let pvar = lazy (Lib_coq.init_constant  path "a_pvar")
+  let pconst = lazy (Lib_coq.init_constant path "a_pconst")  
+  let xH = lazy (Lib_coq.init_constant path "a_xH")
+  let xO = lazy (Lib_coq.init_constant path "a_xO")
+  let xI = lazy (Lib_coq.init_constant path "a_xI")
+
+
+  let eval = lazy(Lib_coq.init_constant path "eval")
 
   (** [eval] is the Coq function that maps a reified Coq arithmetic
       expression back to a nat *)
-  let eval = lazy(Lib_coq.init_constant path "eval")
 
   (** [to_constr t] build the Coq term that corresponds to [t]. *)
-  let rec to_constr (t : Arith.t) : Term.constr =  match t with
-      | Arith.Plus (a, b) -> Term.mkApp (Lazy.force plus, [|(to_constr a); (to_constr b)|])
-      | Arith.Const n -> Term.mkApp (Lazy.force const, [|Lib_coq.Nat.of_int n|])
-      | Arith.Succ a -> Term.mkApp (Lazy.force succ, [|(to_constr a)|])
-      | Arith.Var n ->  Term.mkApp (Lazy.force var, [|Lib_coq.Nat.of_int n|])
+  let rec to_constr (t: Arith.t) : Term.constr = 
+    let rec to_constr_p (p: Arith.p)  =
+	  match p with
+        | Arith.XO a -> Term.mkApp (Lazy.force xO, [|(to_constr_p a)|])
+        | Arith.XI a -> Term.mkApp (Lazy.force xI, [|(to_constr_p a)|])
+        | Arith.XH ->  (Lazy.force xH)
+        | Arith.PConst n -> Term.mkApp (Lazy.force pconst, [|(Lib_coq.Positive.to_positive n)|])
+        | Arith.PVar n -> Term.mkApp (Lazy.force pvar, [|(Lib_coq.Positive.to_positive (n+1))|]) 
+	in
+    match t with
+      | Arith.Add (a, b) -> Term.mkApp (Lazy.force add, [|(to_constr a); (to_constr b)|])
+      | Arith.ZNeg a -> Term.mkApp (Lazy.force zneg, [|(to_constr_p a)|])
+      | Arith.ZPos a -> Term.mkApp (Lazy.force zpos, [|(to_constr_p a)|])
+      | Arith.Z0 ->  (Lazy.force z0)
+      | Arith.ZConst n -> Term.mkApp (Lazy.force zconst, [|(Lib_coq.Z.to_Z n)|])
+      | Arith.ZVar n -> Term.mkApp (Lazy.force zvar, [|(Lib_coq.Z.to_Z n)|])
 	
   (** [env_to_constr env] build the Coq list that correspond to the
       environment map. We build a uniform Coq list of nat of type
@@ -91,18 +143,16 @@ module Reif = struct
       tutorials. *)
   let env_to_constr (env : Lib_coq.Env.t) : Term.constr = 
     let l = Lib_coq.Env.to_list env in 
-    Lib_coq.List.of_list (Lazy.force Lib_coq.Nat.typ) l
+    Lib_coq.List.of_list (Lazy.force Lib_coq.Z.typ) l
       
   (** [build_eval env t] builds the Coq term that corresponds to [eval
       env t]. *)
   let build_eval (env : Term.constr) (t : Arith.t) : Term.constr =
-    Lib_coq.lapp eval [|env; to_constr t|]
-  (* alternatively, 
-     Term.mkApp (Lazy.force eval, [|env_to_constr env; to_constr t|]) *)
-      
+    Term.mkApp (Lazy.force eval, [|env; to_constr t|])
+	
   (** [tac] is the final tactic. *)
   let tac : unit Proofview.tactic =
-      Proofview.Goal.enter (fun gl ->
+      Proofview.Goal.enter (fun gl ->   
       (** We get the conclusion of the as a goal, which is a constr.
           (see [proofs/proofview.mli].)  *)
       let concl = Proofview.Goal.raw_concl gl in
@@ -126,7 +176,6 @@ module Reif = struct
 	      {C left == right}
 	      to
 	      {C (eval env left') == (eval env right')}
-	      
 	  *)
           args.(n-2) <- build_eval coq_env left';
           args.(n-1) <- build_eval coq_env right';
@@ -172,7 +221,7 @@ end
     can be invoked inside Coq. 
 *)
 
-TACTIC EXTEND _reflect_
-| ["reflect_arith"] -> [Reif.tac]
+TACTIC EXTEND _brkZ_
+| ["reflect_Z"] -> [Reif.tac]
 END
 

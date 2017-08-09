@@ -73,3 +73,20 @@ sig
   val of_int: int ->Term.constr
 end
 
+
+(** Coq positive numbers *)
+module Positive:
+sig
+  val typ:Term.constr lazy_t
+  val to_positive: int -> Term.constr
+end
+
+(** Coq integers *)
+module Z:
+sig
+  val typ:Term.constr lazy_t
+  val to_Z: int ->  Term.constr
+end
+
+
+
