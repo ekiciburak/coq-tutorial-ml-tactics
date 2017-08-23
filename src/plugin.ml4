@@ -43,8 +43,8 @@ module Arith = struct
     let z0 = Lazy.force z0 in 
     let zneg = Lazy.force zneg in
     let zpos = Lazy.force zpos in
-
-	let xH = Lazy.force xH in 
+    
+    let xH = Lazy.force xH in 
     let xO = Lazy.force xO in
     let xI = Lazy.force xI in 
     (** Second, we decompose recursively the given term.  If the term
@@ -59,14 +59,12 @@ module Arith = struct
 			(** a small match to get a intelligible representation of
 			constants. *)
 		    begin match (paux args.(0)) with 
-		      | PConst i -> PConst (i * 2)
 		      | e -> XO e
 		    end
  	      | Term.App (head,args) when Term.eq_constr head xI && Array.length args = 1 ->      	  
 			(** a small match to get a intelligible representation of
 			constants. *)
 	        begin match (paux args.(0)) with 
-		      | PConst i -> PConst (i * 2 + 1)
 		      | e -> XI e
 	        end
               | _ when Term.eq_constr c xH -> XH
